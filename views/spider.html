@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <meta name="renderer" content="webkit">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta name="keywords" content="基于Node+Socket文章爬虫系统" />
+    <meta name="description" content="基于Node+Socket文章爬虫系统" />
+	  <meta name="author" content="西门互联" />
+    <link href="http://issue.lilidong.cn/static/img/favicon.ico" rel="Shortcut Icon" type="image/x-icon"/>
+    <title>基于Node+Socket文章爬虫系统</title>
+	  <!-- 引入样式 -->
+	  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <link rel="stylesheet" href="css/spider.css">
+  	<!-- 引入组件库 -->
+	  <script src="https://unpkg.com/vue/dist/vue.js"></script>
+	  <!-- import JavaScript -->
+  	<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+  	<link rel="stylesheet" href="http://cdn.bootcss.com/highlight.js/8.0/styles/monokai_sublime.min.css" >
+  	<script src="http://cdn.bootcss.com/highlight.js/8.0/highlight.min.js"></script>
+
+</head>
+<body>
+
+<div id="preloader" class="loading-overlay">
+    <div id="loader"></div>
+</div>
+<script type="text/javascript">
+var first_sceen__time = (+new Date());//记录页面初始化时间埋点统计监控
+ function htmlLoadOver() {
+      document.getElementById('preloader').className = "loading-overlay loaded";
+      if (!!window.addEventListener) {
+          window.addEventListener("load", function() {
+              window.onload_endtime = +new Date();
+              console.log('首屏加载耗时：'+ (window.onload_endtime - window.first_sceen__time) +'ms')
+          });
+      }
+  }
+  function complete() {
+    if (document.readyState == "complete") {
+        htmlLoadOver();
+    } else {
+        document.onreadystatechange = function() {
+            if (document.readyState == "complete") {
+                htmlLoadOver();
+            }
+        }
+    }
+}
+complete();
+</script>
+<!--[if lt IE 10]>
+ <div class="old-browser">
+ <a href="http://browsehappy.com/">
+ <img src="/static/older-browsers.png" alt="您的浏览器版本过低，为了保障您的访问安全，以及获得更友好的用户体验，建议您升级您的浏览器到最新版本。">
+ </a>
+ </div>
+<![endif]-->
+
+<div id="app">
+  
+  <div class="nav_header">
+     <div class="nav_container clearfix">
+	    <span class="logo"></span>基于Node+Socket文章爬虫系统<img src="images/icon_Spider.png" />
+      <a href ="https://github.com/jackieli123723" target="_blank"><img src="images/github.png" class="icon-github fr"  /></a>
+      <a href ="http://issue.lilidong.cn" target="_blank"><img src="images/blog.png" class="icon-github fr"  /></a>
+	 </div>
+  </div>
+
+
+   <div class="clearfix spider-box">
+      <el-button type="warning" icon="el-icon-search" :loading="false"  @click='open()' >开启爬虫</el-button>
+      <el-button type="danger" icon="el-icon-time" @click='clock()' >关闭爬虫</el-button>
+
+      <el-button v-if="clawerFlag" type="primary" icon="el-icon-loading" class="fr">正在爬取</el-button>
+      <el-button v-if="!clawerFlag" type="info" icon="el-icon-time" class="fr" disabled>爬取停止</el-button>
+
+      <el-input  class="fr" v-model="title" style="width: 400px;"  ></el-input> 
+      <span class="fr" style="line-height: 40px;color: #f00"> &nbsp;&nbsp;正在爬取文章的标题：</span>
+
+       <el-input  class="fr" v-model="page" style="width: 100px;"></el-input>
+       <span class="fr" style="line-height: 40px;color: #f00">正在爬取的页数：</span>
+   </div>
+
+  
+  <div class="spider_content">
+    	 <el-table
+    		:data="spiderTableData"
+        class="spider-table"
+    		style="width: 100%">
+    		 <el-table-column
+    		  label="序号"
+    		  width="100">
+    		  <template slot-scope="scope">
+    		{{ scope.$index+1 }}
+    		  </template>
+    		</el-table-column>
+    	    <el-table-column
+    		  label="文章id"
+    		  width="100">
+    		  <template slot-scope="scope">
+    	    {{ scope.row.id }}
+    		  </template>
+    		</el-table-column>
+    		
+    		 <el-table-column
+    		  label="文章类型"
+    		  width="100"
+    		  >
+    		  <template slot-scope="scope">
+    	    <span class="el-tag el-tag--success">{{ scope.row.paperType }}</span>
+    		  </template>
+    		 
+    		</el-table-column>
+    		
+    		 <el-table-column
+    		  label="文章阅读量"
+    		  width="150"
+    		  >
+    		  <template slot-scope="scope">
+    		   <div v-if='scope.row.loveNum >0 && scope.row.loveNum < 20'>
+    		   <span style="color:#00d053;"> {{ scope.row.loveNum }}</span>
+    		   </div>
+    		   <div v-else-if='scope.row.loveNum >=20 && scope.row.loveNum < 50'>
+    		   <span style="color:rgb(0, 102, 204);"> {{ scope.row.loveNum }}</span>
+    		   </div>
+    		   <div v-else-if='scope.row.loveNum >=50 && scope.row.loveNum < 100'>
+    		   <span style="color:rgb(245, 103, 103);  "> {{ scope.row.loveNum }}</span>
+    		   </div>
+    		   <div v-else-if='scope.row.loveNum >=100 && scope.row.loveNum < 500'>
+    		   <span style="color: rgb(77, 179, 255);"> {{ scope.row.loveNum }}</span>
+    		   </div>
+    		   <div v-else>
+    		   <span style="color:#5E6AF2;"> {{ scope.row.loveNum }}</span>
+    		   </div>
+    		  </template>
+    		  </el-table-column>
+    		  
+    		  <el-table-column
+    		  label="文章热度"
+    		  width="150"
+    		  >
+    		  <template slot-scope="scope">
+    		   <div v-if='scope.row.loveNum >0 && scope.row.loveNum < 20'>
+    		     <el-rate
+    				class="star1"
+    				:max='1'
+    				disabled>
+    			</el-rate>
+    		   </div>
+    		   <div v-else-if='scope.row.loveNum >=20 && scope.row.loveNum < 50'>
+    		     <el-rate
+    				class="star2"
+    				:max='2'
+    				disabled>
+    			</el-rate>
+    		   </div>
+    		   <div v-else-if='scope.row.loveNum >=50 && scope.row.loveNum < 100'>
+    		      <el-rate
+    				class="star3"
+    				:max='3'
+    				disabled>
+    			</el-rate>
+    		   </div>
+    		   <div v-else-if='scope.row.loveNum >=100 && scope.row.loveNum < 500'>
+    		     <el-rate
+    				class="star4"
+    				:max='4'
+    				disabled>
+    			</el-rate>
+    		   </div>
+    		   <div v-else>
+    		      <el-rate
+    				class="star5"
+    				:max='5'
+    				disabled>
+    			</el-rate>
+    		   </div>
+    		  
+    		  </template>
+    		  </el-table-column>
+    		
+    		 <el-table-column
+    		  label="文章标题"
+    		  >
+    		  <template slot-scope="scope">
+    	    {{ scope.row.title.length > 25 ? scope.row.title.substring(0,25)+'...': scope.row.title}}
+    		  </template>
+    		</el-table-column>
+    		
+    		  <el-table-column
+    		  label="文章地址"
+    		 >
+    		  <template slot-scope="scope">
+    	    {{ scope.row.href }}
+    		  </template>
+    		</el-table-column>
+    	
+    		<el-table-column
+    		  label="文章发表日期"
+    		  width="210">
+    		  <template slot-scope="scope">
+    			<i class="el-icon-time"></i>
+    			<span style="margin-left: 10px">{{ scope.row.originTime }}</span>
+    		  </template>
+    		</el-table-column>
+    	
+    		<el-table-column 
+    		label="操作"
+    		width="220"
+    		>
+    		  <template slot-scope="scope">
+    			<el-button
+    			  size="mini"
+    			  type="success"
+    			  @click="lookPage(scope.$index, scope.row)">文章预览</el-button>
+    			<el-button
+    			  size="mini"
+    			  type="warning"
+    			  @click="goToPage(scope.$index, scope.row)">查看原文</el-button>
+    		  </template>
+    		</el-table-column>
+    	  </el-table>
+	  
+	  <div class="page">
+		<el-pagination
+      v-if="totalPages && totalPages >0"
+		  @size-change="handleSizeChange"
+		  @current-change="handleCurrentChange"
+		  :current-page="currentPage"
+		  :page-sizes="[100, 200, 300, 400]"
+		  :page-size="100"
+		  layout="total, sizes, prev, pager, next, jumper"
+		  :total="totalPages">
+		</el-pagination>
+	  </div>
+  
+  </div>
+
+
+    <!-- 预览文章 -->
+    <div class="ui-dialog-box" :class="{'ui-dialog-show':previeWFlag}"  >
+           <div class="ui-dialog-mask" @click="previeWFlagDone"></div>
+           <div class="ui-dialog-center-box ui-dialog-paper" >
+               <div class="ui-dialog-info"  v-html="content"  v-highlight></div>
+               <div class="ui-dialog-btn-box">
+                   <span class="ui-dialog-btn-cancel" @click="previeWFlagDone">关闭</span>
+               </div>
+           </div>
+    </div>
+  
+  
+  <div class="layout-footer" style="text-align:center;padding:10px 0;">Created by jakceili ©2018 </div>
+ <!--   <div class="ui-dialog-info"  v-html="content" v-highlight></div> -->
+  
+</div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/spider.js"></script>
+</body>
+</html>
