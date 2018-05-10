@@ -1,4 +1,4 @@
-// require Express and Socket.io
+﻿// require Express and Socket.io
 const express = require('express');
 const app = express();
 const http = require('http').Server(app);
@@ -30,6 +30,15 @@ let spider = {
   spiderDataPages:[],
   page:1
 }
+
+process.on('unhandledRejection', (reason, p) => {
+    console.log("Unhandled Rejection at: Promise ", p, " reason: ", reason);
+    // application specific logging, throwing an error, or other logic here
+});
+
+process.on("uncaughtException", function(e) {
+  console.log(e);
+});
 
 let running = false;
 
